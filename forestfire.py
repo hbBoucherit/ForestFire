@@ -8,6 +8,7 @@ _screenSize = (600 , 600)
 _cellSize = 10
 _gridDim = tuple(map(lambda x: int(x / _cellSize), _screenSize))
 _density = 0.7 #densité de la forêt 
+_water = 15 #points d'eau 
 
 #dans l'ordre : espace vide, arbre, arbre en feu, arbre coriace, arbre coriace affaibli, eau  
 _colors = [(255, 255, 255), (0, 255, 0), (255, 0, 0), (0,100,0), (0,100,0), (0,191,255)]
@@ -24,13 +25,18 @@ max = (gg_width * gg_height * _density)
 #0 > pas d'arbre - 1 > présence d'un arbre - 2 > présence d'un feufeu
 for i in range(100):
        glidergun[randint(0,gg_height-1)][randint(0,gg_width-1)] = 3
-for i in range(100):
-       glidergun[randint(0,gg_height-1)][randint(0,gg_width-1)] = 5
 while (cpt < max) :
     if glidergun[randint(0,gg_height-1)][randint(0,gg_width-1)] == 0 :
         glidergun[randint(0,gg_height-1)][randint(0,gg_width-1)] = 1
         cpt = cpt + 1 
-
+for i in range(_water):
+       x = randint(0,gg_height-2)
+       y = randint(0,gg_width-2)    
+       #un point d'eau sera plus grand (4 carreaux au lieu d'un)
+       glidergun[x][y] = 5
+       glidergun[x+1][y] = 5
+       glidergun[x][y+1] = 5
+       glidergun[x+1][y+1] = 5
 def getColorCell(n):
     return _colors[n]
 
@@ -54,12 +60,7 @@ class Grid:
         self._grid[nx//2+1,ny//2] = 2
         self._grid[nx//2,ny//2+1] = 2
         self._grid[nx//2+1,ny//2+1] = 2
-
-        #feu dans les 2 coins
-        self._grid[0,ny-1] = 2
-        self._grid[nx-1,0] = 2
         
-
     def indiceVoisins(self, x,y):
         return [(dx+x,dy+y) for (dx,dy) in self._indexVoisins if dx+x >=0 and dx+x < _gridDim[0] and dy+y>=0 and dy+y < _gridDim[1]] 
 
@@ -106,30 +107,14 @@ class Scene:
 
     def update(self):
         for c, s in self._grid.sumEnumerate():
-            #si arbre en feu
-            if (self._grid._grid[c[0],c[1]]==2) :
-                #l'arbre en feu est détruit 
-                self._grid._gridbis[c[0],c[1]]=0
-                #tous les arbres voisins prennent feu
-                voisins = self._grid.indiceVoisins(c[0],c[1])
-                for i in range (len(voisins)):
-                    #les arbres sont brûlés lorsqu'ils existent (==1)
-                    if (self._grid._grid[voisins[i][0], voisins[i][1]] == 1) :
-                        self._grid._gridbis[voisins[i][0], voisins[i][1]] = 2
-                    #si arbre coriace, il est affaibli 
-                    elif self._grid._grid[voisins[i][0], voisins[i][1]] ==3 :
-                        self._grid._gridbis[voisins[i][0], voisins[i][1]]=4 
-                    #si arbre affaibli, il prend feu 
-                    elif self._grid._grid[voisins[i][0], voisins[i][1]]==4 :
-                        self._grid._gridbis[voisins[i][0], voisins[i][1]]=2 
             #si arbre n'est pas en feu 
-            elif self._grid._grid[c[0], c[1]] == 1 : 
+            if self._grid._grid[c[0], c[1]] == 1 : 
                 #si arbre a un voisin en feu 
                 if self._grid.voisinFeu(c[0],c[1]) :  
                     self._grid._gridbis[c[0], c[1]] = 2
                 else : self._grid._gridbis[c[0], c[1]] = 1 
             
-            #si arbre coriace est pas de voisin en feu, il ne change pas
+            #si arbre coriace et pas de voisin en feu, il ne change pas
             elif self._grid._grid[c[0], c[1]] == 3 : 
                 #si arbre a un voisin en feu 
                 if self._grid.voisinFeu(c[0],c[1]) :  
@@ -148,7 +133,26 @@ class Scene:
                 self._grid._gridbis[c[0], c[1]] = 5
 
             #vide - pas d'arbres
-            else : self._grid._gridbis[c[0], c[1]] = 0
+            elif self._grid._grid[c[0], c[1]] == 0 : self._grid._gridbis[c[0], c[1]] = 0    
+
+            #si arbre en feu
+            elif (self._grid._grid[c[0],c[1]]==2) :
+                #l'arbre en feu est détruit 
+                self._grid._gridbis[c[0],c[1]]=0
+                #tous les arbres voisins prennent feu
+                voisins = self._grid.indiceVoisins(c[0],c[1])
+                for i in range (len(voisins)):
+                    #les arbres sont brûlés lorsqu'ils existent (==1)
+                    if (self._grid._grid[voisins[i][0], voisins[i][1]] == 1) :
+                        self._grid._gridbis[voisins[i][0], voisins[i][1]] = 2
+                    #si arbre coriace, il est affaibli 
+                    elif self._grid._grid[voisins[i][0], voisins[i][1]] ==3 :
+                        self._grid._gridbis[voisins[i][0], voisins[i][1]]=4 
+                    #si arbre affaibli, il prend feu 
+                    elif self._grid._grid[voisins[i][0], voisins[i][1]]==4 :
+                        self._grid._gridbis[voisins[i][0], voisins[i][1]]=2 
+            
+            
         self._grid._grid = np.copy(self._grid._gridbis)
 
 def main():
