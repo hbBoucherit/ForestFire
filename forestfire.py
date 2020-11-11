@@ -73,7 +73,7 @@ class Grid:
         for i in range(len(indice)) :
             if self._grid[indice[i][0], indice[i][1]] == 2 :
                 feu = True
-            return feu
+        return feu
 
     def sommeVoisins(self, x, y):
         return sum(self.voisins(x,y))        
