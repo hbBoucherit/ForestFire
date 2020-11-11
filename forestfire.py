@@ -4,9 +4,10 @@ import pygame.draw
 import numpy as np
 from random import randint 
 
-_screenSize = (600 , 600) 
+_screenSize = (800 , 800) 
+_forestSize = (600, 600)
 _cellSize = 10
-_gridDim = tuple(map(lambda x: int(x / _cellSize), _screenSize))
+_gridDim = tuple(map(lambda x: int(x / _cellSize), _forestSize))
 _density = 0.7 #densité de la forêt 
 _water = 15 #points d'eau 
 
@@ -17,29 +18,23 @@ _colors = [(255, 255, 255), (0, 255, 0), (255, 0, 0), (0,100,0), (0,100,0), (0,1
 gg_width, gg_height = 60, 60
 glidergun=[[0]*gg_width for i in range(gg_height)]
 #on remplit le terrain avec des arbres en fonction de la densité
-cpt = 0 #nombre d'arbres
-#le nombre d'arbres ne doit pas dépasser le nombre de case * la densité
-max = (gg_width * gg_height * _density)
-
-
+cpt = 0 #compteur d'arbres
+max = (gg_width * gg_height * _density) #nombre d'arbres crées (avant le feu)
+print(max)
 #0 > pas d'arbre - 1 > présence d'un arbre - 2 > présence d'un feufeu
 for i in range(100):
        glidergun[randint(0,gg_height-1)][randint(0,gg_width-1)] = 3
-while (cpt < max) :
-    if glidergun[randint(0,gg_height-1)][randint(0,gg_width-1)] == 0 :
-        glidergun[randint(0,gg_height-1)][randint(0,gg_width-1)] = 1
-        cpt = cpt + 1 
 for i in range(_water):
        x = randint(0,gg_height-2)
        y = randint(0,gg_width-2)    
-       #un point d'eau sera plus grand (4 carreaux au lieu d'un)
        glidergun[x][y] = 5
-       glidergun[x+1][y] = 5
-       glidergun[x][y+1] = 5
-       glidergun[x+1][y+1] = 5
+while (cpt <= max) :
+    if glidergun[randint(0,gg_height-1)][randint(0,gg_width-1)] == 0 :
+        glidergun[randint(0,gg_height-1)][randint(0,gg_width-1)] = 1
+        cpt = cpt + 1 
+
 def getColorCell(n):
     return _colors[n]
-
 
 class Grid:
     _grid= None
@@ -87,12 +82,29 @@ class Grid:
 class Scene:
     _grid = None
     _font = None
+    _nbTrees = 0
 
     def __init__(self):
         pygame.init()
         self._screen = pygame.display.set_mode(_screenSize)
-        self._font = pygame.font.SysFont('Arial',25)
+        self._font = pygame.font.SysFont('Arial',18)
         self._grid = Grid()
+        self._nbTrees = 0
+
+    #drawText permet d'afficher du texte sur la scene
+    def drawText(self, text, position, color):
+        self._screen.blit(self._font.render(text,1,color),position)
+
+    def countLeftTrees(self):
+        self._nbTrees = 0 
+        for i in range(len(self._grid._grid)):
+            for j in range(len(self._grid._grid)):
+                if self._grid._grid[i,j] == 1 or self._grid._grid[i,j] == 3 : 
+                    self._nbTrees = self._nbTrees + 1
+        return self._nbTrees
+    
+    def countDestroyedTrees(self):
+        return (max - self._nbTrees)
 
     #drawMe remplit l'écran, dessine des rectangles
     def drawMe(self):
@@ -101,9 +113,20 @@ class Scene:
         self._screen.fill((255,255,255))
         for x in range(gg_width):
             for y in range(gg_height):
-                pygame.draw.rect(self._screen, 
-                        getColorCell(self._grid._grid.item((x,y))),
-                        (x*_cellSize + 1, y*_cellSize + 1, _cellSize-2, _cellSize-2))
+                pygame.draw.rect(self._screen, (255,255,255), (x*_cellSize + 1, y*_cellSize + 1, _cellSize-2, _cellSize-2))
+                pygame.draw.rect(self._screen, getColorCell(self._grid._grid.item((x,y))), (x*_cellSize + 1, y*_cellSize + 1, _cellSize-2, _cellSize-2))
+        
+        #cadrage de la scène
+        points = [(0,0), (_forestSize[0],0), (_forestSize[0],_forestSize[0]), (0,_forestSize[0])]
+        pygame.draw.lines(self._screen, (0,0,0), True, points, 2) 
+        #affichage de la densité de la forêt
+        self.drawText("• Densité de la forêt : " + str(_density), (20,_forestSize[0]+20), (0,0,0))
+        #nombre d'arbres restants
+        self.drawText("• Nombre d'arbres restants : " + str(self.countLeftTrees()), (20,_forestSize[0]+50), (0,0,0))
+        #nombre d'arbres détruits
+        self.drawText("• Nombre d'arbres détruits : " + str(self.countDestroyedTrees()), (20,_forestSize[0]+80), (0,0,0))
+        #pourcentage d'arbres détruits 
+        self.drawText("• Pourcentage d'arbres détruits : " + str(round(self.countDestroyedTrees()/max,2)), (20,_forestSize[0]+110), (0,0,0))
 
     def update(self):
         for c, s in self._grid.sumEnumerate():
@@ -156,10 +179,21 @@ class Scene:
         self._grid._grid = np.copy(self._grid._gridbis)
 
 def main():
+     # The button is just a rect.
+    button = pygame.Rect(0, 100, 200, 200)
+
     scene = Scene()
     done = False
     clock = pygame.time.Clock()
     while done == False:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                done = True
+            # This block is executed once for each MOUSEBUTTONDOWN event.
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                # 1 is the left mouse button, 2 is middle, 3 is right.
+                if event.button == 1:
+                    break
         scene.drawMe()
         scene.update()
         pygame.display.flip()
