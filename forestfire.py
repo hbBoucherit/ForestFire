@@ -3,6 +3,8 @@ import pygame
 import pygame.draw
 import numpy as np
 from random import randint 
+from matplotlib import pyplot as plt
+import pandas as pd
 
 _screenSize = (800 , 800) 
 _forestSize = (600, 600)
@@ -13,11 +15,12 @@ _water = 15 #points d'eau
 #dans l'ordre : espace vide, arbre, arbre en feu, arbre coriace, arbre coriace affaibli, eau  
 _colors = [(255, 255, 255), (0, 255, 0), (255, 0, 0), (0,100,0), (0,100,0), (0,191,255)]
 
-playRect = pygame.Rect(_forestSize[0]+20, 60, 50, 30)
-stopRect = pygame.Rect(_forestSize[0]+80, 60, 50, 30)
-density3Rect = pygame.Rect(_forestSize[0]+20, 20, 40, 30)
-density5Rect = pygame.Rect(_forestSize[0]+70, 20, 40, 30)
-density7Rect = pygame.Rect(_forestSize[0]+120, 20, 40, 30)
+playRect = pygame.Rect(_forestSize[0]+20, 100, 50, 30)
+stopRect = pygame.Rect(_forestSize[0]+80, 100, 50, 30)
+density3Rect = pygame.Rect(_forestSize[0]+20, 20, 50, 30)
+density5Rect = pygame.Rect(_forestSize[0]+80, 20, 50, 30)
+density7Rect = pygame.Rect(_forestSize[0]+20, 60, 50, 30)
+density9Rect = pygame.Rect(_forestSize[0]+80, 60, 50, 30)
 
 gg_width, gg_height = 60, 60
 
@@ -28,9 +31,9 @@ class Grid:
     _grid= None
     _gridbis = None
     _indexVoisins = [(-1,-1),(-1,0),(-1,1),(0,-1),(0,1),(1,-1),(1,0),(1,1)]
-    def __init__(self, density):
+    def __init__(self, density, age):
         print("Creating a grid of dimensions " + str(_gridDim))
-        glidergun = self.initGlidergun(density)
+        glidergun = self.initGlidergun(density, age)
         self._grid = np.zeros(_gridDim, dtype='int8')
         self._gridbis = np.zeros(_gridDim, dtype='int8')
         #On initialise avec le glidergun 
@@ -45,25 +48,63 @@ class Grid:
         self._grid[nx//2,ny//2+1] = 2
         self._grid[nx//2+1,ny//2+1] = 2
     
-    def initGlidergun(self, density):
+    def initGlidergun(self, density, age):
         #taille du glidergun
         glidergun=[[0]*gg_width for i in range(gg_height)]
+        
         #on remplit le terrain avec des arbres en fonction de la densité
-        cpt = 0 #compteur d'arbres
-        print(density)
-        max = (gg_width * gg_height * density) #nombre d'arbres crées (avant le feu)
-        print(max)
-        #0 > pas d'arbre - 1 > présence d'un arbre - 2 > présence d'un feufeu
-        for i in range(100):
-               glidergun[randint(0,gg_height-1)][randint(0,gg_width-1)] = 3
+        max = (gg_width * gg_height * round(density,1)) #nombre d'arbres crées (avant le feu)
+
         for i in range(_water):
-               x = randint(0,gg_height-2)
-               y = randint(0,gg_width-2)    
+            x = randint(0,gg_height-1)
+            y = randint(0,gg_width-1)
+            if glidergun[x][y] == 0 :
                glidergun[x][y] = 5
-        while (cpt <= max) :
-            if glidergun[randint(0,gg_height-1)][randint(0,gg_width-1)] == 0 :
-                glidergun[randint(0,gg_height-1)][randint(0,gg_width-1)] = 1
-                cpt = cpt + 1           
+               
+        #le pourcentage d'arbres de différentes forces n'est pas le même suivant la densité que l'on fixe
+        #on part également du principe que plus une forêt est dense, plus elle contient d'arbres ancients et donc plus résistants
+        if(age == 5): 
+            d0 = 0.7 #pourcentage d'arbres normaux
+            d1 = 0.2 #pourcentage d'arbres forts et donc plus difficiles à brûler
+            d2 = 0.1 #pourcentage d'arbres encore plus forts 
+        elif(age == 10):
+            d0 = 0.4
+            d1 = 0.4
+            d2 = 0.2
+        elif(age == 15): 
+            d0 = 0.3
+            d1 = 0.3
+            d2 = 0.4
+        elif(age == 20):
+            d0 = 0.2
+            d1 = 0.3
+            d2 = 0.5
+        
+        cpt0 = 0 #compteur d'arbres normaux
+        cpt1 = 0 #compteur d'arbres plus forts
+        cpt2 = 0 #compteur d'arbres encore plus forts
+        
+        while cpt0 <= d0 * max : 
+            x = randint(0,gg_height-1)
+            y = randint(0,gg_width-1)
+            if glidergun[x][y] == 0 :
+               glidergun[x][y] = 1
+               cpt0 = cpt0 + 1
+        
+        while cpt1 <= d1 * max : 
+            x = randint(0,gg_height-1)
+            y = randint(0,gg_width-1)
+            if glidergun[x][y] == 0 :
+               glidergun[x][y] = 3
+               cpt1 = cpt1 + 1
+        
+        while cpt2 <= d2 * max : 
+            x = randint(0,gg_height-1)
+            y = randint(0,gg_width-1)
+            if glidergun[x][y] == 0 :
+               glidergun[x][y] = 4
+               cpt2 = cpt2 + 1 
+               
         return glidergun
         
     def indiceVoisins(self, x,y):
@@ -92,16 +133,15 @@ class Grid:
 class Scene:
     _grid = None
     _font = None
-    _nbTrees = 0
 
-    def __init__(self, density):
+    def __init__(self, density, age):
         pygame.init()
         self._density = density
+        self._age = age
         self._screen = pygame.display.set_mode(_screenSize)
         self._font = pygame.font.SysFont('Arial',18)
-        self._grid = Grid(self._density)
-        self._max = (gg_width * gg_height * self._density)
-        self._nbTrees = 0
+        self._grid = Grid(self._density, self._age)
+        self._max = gg_width * gg_height * round(self._density,1)
 
     #drawText permet d'afficher du texte sur la scene
     def drawText(self, text, position, color):
@@ -120,15 +160,18 @@ class Scene:
         
 
     def countLeftTrees(self):
-        self._nbTrees = 0 
+        self._leftTrees = 0 
         for i in range(len(self._grid._grid)):
             for j in range(len(self._grid._grid)):
-                if self._grid._grid[i,j] == 1 or self._grid._grid[i,j] == 3 : 
-                    self._nbTrees = self._nbTrees + 1
-        return self._nbTrees
+                if self._grid._grid[i,j] == 1 or self._grid._grid[i,j] == 3 or self._grid._grid[i,j] == 4 :
+                    self._leftTrees = self._leftTrees + 1
+        return self._leftTrees
     
     def countDestroyedTrees(self):
-        return (self._max - self._nbTrees)
+        return (self._max - self.countLeftTrees())
+    
+    def countDestroyedTreesPourcent(self):
+        return self.countDestroyedTrees()/self._max
 
     #drawMe remplit l'écran, dessine des rectangles
     def drawMe(self):
@@ -144,9 +187,10 @@ class Scene:
         points = [(0,0), (_forestSize[0],0), (_forestSize[0],_forestSize[0]), (0,_forestSize[0])]
         pygame.draw.lines(self._screen, (0,0,0), True, points, 2)
         
-        self.drawButton("0.3", density3Rect, (0, 255, 0), (0, 195, 0))
-        self.drawButton("0.5", density5Rect, (0, 155, 0), (0, 95, 0))
-        self.drawButton("0.7", density7Rect, (0, 95, 0), (0, 55, 0))
+        self.drawButton("5 ans", density3Rect, (0, 255, 0), (0, 195, 0))
+        self.drawButton("10 ans", density5Rect, (0, 155, 0), (0, 95, 0))
+        self.drawButton("15 ans", density7Rect, (0, 95, 0), (0, 55, 0))
+        self.drawButton("20 ans", density9Rect, (0, 95, 0), (0, 55, 0))
         self.drawButton("Play", playRect, (200, 200, 200), (100, 100, 100))
         self.drawButton("Stop", stopRect, (200, 200, 200), (100, 100, 100))
         
@@ -157,7 +201,7 @@ class Scene:
         #nombre d'arbres détruits
         self.drawText("- Nombre d'arbres detruits : " + str(self.countDestroyedTrees()), (20,_forestSize[0]+80), (0,0,0))
         #pourcentage d'arbres détruits 
-        self.drawText("- Pourcentage d'arbres detruits : " + str(round(self.countDestroyedTrees()/self._max,2)), (20,_forestSize[0]+110), (0,0,0))
+        self.drawText("- Pourcentage d'arbres detruits : " + str(round(self.countDestroyedTreesPourcent(), 2)), (20,_forestSize[0]+110), (0,0,0))
     
 
     def update(self):
@@ -169,18 +213,18 @@ class Scene:
                     self._grid._gridbis[c[0], c[1]] = 2
                 else : self._grid._gridbis[c[0], c[1]] = 1 
             
-            #si arbre coriace et pas de voisin en feu, il ne change pas
+            #si arbre fort et pas de voisin en feu, il ne change pas
             elif self._grid._grid[c[0], c[1]] == 3 : 
                 #si arbre a un voisin en feu 
                 if self._grid.voisinFeu(c[0],c[1]) :  
-                    self._grid._gridbis[c[0], c[1]] = 4
+                    self._grid._gridbis[c[0], c[1]] = 1
                 else : self._grid._gridbis[c[0], c[1]] = 3
             
-            #si arbre affaibli mais pas de voisin en feu, il ne change pas
+            #si arbre très fort, il perd un peu de force
             elif self._grid._grid[c[0], c[1]] == 4 : 
                 #si arbre a un voisin en feu 
                 if self._grid.voisinFeu(c[0],c[1]) :  
-                    self._grid._gridbis[c[0], c[1]] = 2
+                    self._grid._gridbis[c[0], c[1]] = 3
                 else : self._grid._gridbis[c[0], c[1]] = 4
 
             #points d'eau, résistant au feu 
@@ -188,7 +232,8 @@ class Scene:
                 self._grid._gridbis[c[0], c[1]] = 5
 
             #vide - pas d'arbres
-            elif self._grid._grid[c[0], c[1]] == 0 : self._grid._gridbis[c[0], c[1]] = 0    
+            elif self._grid._grid[c[0], c[1]] == 0 : 
+                self._grid._gridbis[c[0], c[1]] = 0    
 
             #si arbre en feu
             elif (self._grid._grid[c[0],c[1]]==2) :
@@ -197,21 +242,60 @@ class Scene:
                 #tous les arbres voisins prennent feu
                 voisins = self._grid.indiceVoisins(c[0],c[1])
                 for i in range (len(voisins)):
-                    #les arbres sont brûlés lorsqu'ils existent (==1)
+                    #les arbres normaux sont brûlés lorsqu'ils existent (==1)
                     if (self._grid._grid[voisins[i][0], voisins[i][1]] == 1) :
                         self._grid._gridbis[voisins[i][0], voisins[i][1]] = 2
-                    #si arbre coriace, il est affaibli 
+                    #si arbre fort, il est affaibli 
                     elif self._grid._grid[voisins[i][0], voisins[i][1]] ==3 :
-                        self._grid._gridbis[voisins[i][0], voisins[i][1]]=4 
-                    #si arbre affaibli, il prend feu 
-                    elif self._grid._grid[voisins[i][0], voisins[i][1]]==4 :
-                        self._grid._gridbis[voisins[i][0], voisins[i][1]]=2 
+                        self._grid._gridbis[voisins[i][0], voisins[i][1]]=1 
+                    #si arbre très fort, il s'affaibli un peu mais reste un peu fort
+                    elif self._grid._grid[voisins[i][0], voisins[i][1]]== 4 :
+                        self._grid._gridbis[voisins[i][0], voisins[i][1]]=3 
             
-            
-        self._grid._grid = np.copy(self._grid._gridbis) 
+        self._grid._grid = np.copy(self._grid._gridbis)
+        
+class Simulation:
+    def __init__(self):
+        self._densities = [0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65,
+                             0.7, 0.75, 0.8, 0.85, 0.9, 0.95]
+        self._age = [5, 10, 15, 20]
+        self._leftTrees = []
+
+    def simulate(self):
+        for j in range(len(self._age)):
+            self._leftTrees.append([])
+            for i in range(len(self._densities)):
+                print(self._densities[i])
+                scene = Scene(self._densities[i], self._age[j])
+                done = False
+                countLeftTrees = scene.countDestroyedTreesPourcent()
+                while done == False:
+                    scene.update()
+                    if(countLeftTrees == scene.countDestroyedTreesPourcent()):
+                        countLeftTrees = scene.countDestroyedTreesPourcent()
+                        done = True
+                    else:
+                        countLeftTrees = scene.countDestroyedTreesPourcent()
+                self._leftTrees[j].append(round(countLeftTrees, 4))
+            print(self._densities)
+            print(self._leftTrees)
+        
+        
+        df = pd.DataFrame({'x': self._densities, 'y1': self._leftTrees[0], 'y2': self._leftTrees[1], 'y3': self._leftTrees[2], 'y4': self._leftTrees[3]})
+        
+        plt.subplot(111)
+        plt.plot('x', 'y1', data=df, marker='o', markerfacecolor="green", color="green", label="5 ans")
+        plt.plot('x', 'y2', data=df, marker='o', markerfacecolor="blue", color="blue", label="10 ans")
+        plt.plot('x', 'y3', data=df, marker='o', markerfacecolor="red", color="red", label="15 ans")
+        plt.plot('x', 'y4', data=df, marker='o', markerfacecolor="grey", color="grey", label="20 ans")
+        plt.legend()
+        plt.xlabel("Densite")
+        plt.ylabel("Pourcentage d'arbres detruits")
+        plt.show()
     
 def main():
-    scene = Scene(0.7)
+    #Simulation().simulate()
+    scene = Scene(0.4, 5)
     done = False
     start = False
     clock = pygame.time.Clock()
@@ -233,11 +317,17 @@ def main():
                     if(stopRect.collidepoint(mouse)):
                         start = False
                     if(density3Rect.collidepoint(mouse)):
-                        scene = Scene(0.3)
+                        scene = Scene(0.4, 5)
+                        start = False
                     if(density5Rect.collidepoint(mouse)):
-                        scene = Scene(0.5)
+                        scene = Scene(0.5, 10)
+                        start = False
                     if(density7Rect.collidepoint(mouse)):
-                        scene = Scene(0.7)
+                        scene = Scene(0.6, 15)
+                        start = False
+                    if(density9Rect.collidepoint(mouse)):
+                        scene = Scene(0.7, 20)
+                        start = False
                             
     pygame.quit()
 
