@@ -77,12 +77,10 @@ class Grid:
             if glidergun[x][y] == 0 :
                glidergun[x][y] = 5
                
-        #le pourcentage d'arbres de différentes forces n'est pas le même suivant la densité que l'on fixe
-        #on part également du principe que plus une forêt est dense, plus elle contient d'arbres ancients et donc plus résistants
         if(age == 5): 
-            d0 = 0.7 #pourcentage d'arbres normaux
-            d1 = 0.2 #pourcentage d'arbres forts et donc plus difficiles à brûler
-            d2 = 0.1 #pourcentage d'arbres encore plus forts 
+            d0 = 0.7 #pourcentage d'arbres jeunes
+            d1 = 0.2 #pourcentage d'arbres résistants
+            d2 = 0.1 #pourcentage d'arbres très forts
         elif(age == 10):
             d0 = 0.5
             d1 = 0.4
@@ -96,9 +94,9 @@ class Grid:
             d1 = 0.3
             d2 = 0.3
         
-        cpt0 = 0 #compteur d'arbres normaux
-        cpt1 = 0 #compteur d'arbres plus forts
-        cpt2 = 0 #compteur d'arbres encore plus forts
+        cpt0 = 0 #compteur d'arbres jeunes
+        cpt1 = 0 #compteur d'arbres résistants
+        cpt2 = 0 #compteur d'arbres encore très forts
         
         while cpt0 < d0 * max : 
             x = randint(0,gg_height-1)
@@ -171,7 +169,7 @@ class Scene:
         else:
             pygame.draw.rect(self._screen, color2, (rect[0], rect[1], rect[2], rect[3]))  
         
-        self.drawText(title, ((rect[0]+(rect[2]/2)-10), (rect[1]+(rect[3]/2)-10)), (0,0,0))
+        self.drawText(title, ((rect[0]+(rect[2]/2)-21), (rect[1]+(rect[3]/2)-10)), (0,0,0))
         
 
     def countLeftTrees(self):
@@ -202,12 +200,12 @@ class Scene:
         points = [(0,0), (_forestSize[0],0), (_forestSize[0],_forestSize[0]), (0,_forestSize[0])]
         pygame.draw.lines(self._screen, (0,0,0), True, points, 2)
         
-        self.drawButton("5 ans", density3Rect, (0, 255, 0), (0, 195, 0))
-        self.drawButton("10 ans", density5Rect, (0, 155, 0), (0, 95, 0))
-        self.drawButton("15 ans", density7Rect, (0, 95, 0), (0, 55, 0))
-        self.drawButton("20 ans", density9Rect, (0, 95, 0), (0, 55, 0))
-        self.drawButton("Play", playRect, (200, 200, 200), (100, 100, 100))
-        self.drawButton("Stop", stopRect, (200, 200, 200), (100, 100, 100))
+        self.drawButton(" 5 ans", density3Rect, (230, 230, 230), (200, 200, 200))
+        self.drawButton("10 ans", density5Rect, (200, 200, 200), (170, 170, 170))
+        self.drawButton("15 ans", density7Rect, (170, 170, 170), (140, 140, 140))
+        self.drawButton("20 ans", density9Rect, (140, 140, 140), (110, 110, 110))
+        self.drawButton("  Play", playRect, (0, 255, 0), (0, 128, 0))
+        self.drawButton("  Stop", stopRect, (255, 0, 0), (139, 0, 0))
         
         #affichage de la densité de la forêt
         self.drawText("- Densite de la foret : " + str(self._density), (20,_forestSize[0]+20), (0,0,0))
@@ -280,7 +278,6 @@ class Simulation:
         for j in range(len(self._age)):
             self._destroyedTrees.append([])
             for i in range(len(self._densities)):
-                print(self._densities[i])
                 scene = Scene(self._densities[i], self._age[j])
                 done = False
                 countDestroyedTrees = scene.countDestroyedTreesPourcent()
@@ -292,8 +289,6 @@ class Simulation:
                     else:
                         countDestroyedTrees = scene.countDestroyedTreesPourcent()
                 self._destroyedTrees[j].append(round(countDestroyedTrees, 4))
-            print(self._densities)
-            print(self._destroyedTrees)
         
         
         df = pd.DataFrame({'x': self._densities, 'y1': self._destroyedTrees[0], 'y2': self._destroyedTrees[1], 'y3': self._destroyedTrees[2], 'y4': self._destroyedTrees[3]})
