@@ -2,9 +2,25 @@ import sys, math, random
 import pygame
 import pygame.draw
 import numpy as np
+import argparse 
 from random import randint 
 from matplotlib import pyplot as plt
 import pandas as pd
+
+# argument d'execution
+ap = argparse.ArgumentParser()
+ap.add_argument("--mode",help="seeSimulation/studyPercolation")
+mode = ap.parse_args().mode
+
+seeSimulation = False # l'interface est lancée et l'utilisateur peut modifier les paramètres de la simulation 
+studyPercolation = False # l'utilisateur préfère étudier la percolation
+
+if mode=="seeSimulation" :
+    seeSimulation = True
+elif mode=="studyPercolation" : 
+    studyPercolation = True
+else : 
+    print("There are only two possible options : 'seeSimulation' and 'studyPercolation' ")
 
 _screenSize = (800 , 800) 
 _forestSize = (600, 600)
@@ -280,7 +296,7 @@ class Simulation:
             print(self._destroyedTrees)
         
         
-        df = pd.DataFrame({'x': self._densities, 'y1': self._destroyedTrees[0], 'y2': self._destroyedTrees[1], 'y3': self._detroyedTrees[2], 'y4': self._detroyedTrees[3]})
+        df = pd.DataFrame({'x': self._densities, 'y1': self._destroyedTrees[0], 'y2': self._destroyedTrees[1], 'y3': self._destroyedTrees[2], 'y4': self._destroyedTrees[3]})
         
         plt.subplot(111)
         plt.plot('x', 'y1', data=df, marker='o', markerfacecolor="green", color="green", label="5 ans")
@@ -293,41 +309,45 @@ class Simulation:
         plt.show()
     
 def main():
-    Simulation().simulate()
-    scene = Scene(0.4, 5)
-    done = False
-    start = False
-    clock = pygame.time.Clock()
-    while done == False:
-        scene.drawMe()
-        if start == True:
-            scene.update()
-        pygame.display.flip()
-        clock.tick(15)
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT: 
-                print("Exiting")
-                done=True
-            if event.type == pygame.MOUSEBUTTONDOWN:
-                if event.button == 1:
-                    mouse = pygame.mouse.get_pos()
-                    if(playRect.collidepoint(mouse)):
-                        start = True
-                    if(stopRect.collidepoint(mouse)):
-                        start = False
-                    if(density3Rect.collidepoint(mouse)):
-                        scene = Scene(0.4, 5)
-                        start = False
-                    if(density5Rect.collidepoint(mouse)):
-                        scene = Scene(0.5, 10)
-                        start = False
-                    if(density7Rect.collidepoint(mouse)):
-                        scene = Scene(0.6, 15)
-                        start = False
-                    if(density9Rect.collidepoint(mouse)):
-                        scene = Scene(0.7, 20)
-                        start = False
-                            
-    pygame.quit()
+    # l'utilisateur a choisi d'étudier la percolation 
+    if studyPercolation :
+        Simulation().simulate()
+    # l'utilisateur a choisi de voir une simulation sur l'interface 
+    if seeSimulation :
+        scene = Scene(0.4, 5)
+        done = False
+        start = False
+        clock = pygame.time.Clock()
+        while done == False:
+            scene.drawMe()
+            if start == True:
+                scene.update()
+            pygame.display.flip()
+            clock.tick(50)
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT: 
+                    print("Exiting")
+                    done=True
+                if event.type == pygame.MOUSEBUTTONDOWN:
+                    if event.button == 1:
+                        mouse = pygame.mouse.get_pos()
+                        if(playRect.collidepoint(mouse)):
+                            start = True
+                        if(stopRect.collidepoint(mouse)):
+                            start = False
+                        if(density3Rect.collidepoint(mouse)):
+                            scene = Scene(0.4, 5)
+                            start = False
+                        if(density5Rect.collidepoint(mouse)):
+                            scene = Scene(0.5, 10)
+                            start = False
+                        if(density7Rect.collidepoint(mouse)):
+                            scene = Scene(0.6, 15)
+                            start = False
+                        if(density9Rect.collidepoint(mouse)):
+                            scene = Scene(0.7, 20)
+                            start = False
+                                
+        pygame.quit()
 
 if not sys.flags.interactive: main()
