@@ -277,10 +277,10 @@ class Simulation:
                         countDestroyedTrees = scene.countDestroyedTreesPourcent()
                 self._destroyedTrees[j].append(round(countDestroyedTrees, 4))
             print(self._densities)
-            print(self._destroyedtTrees)
+            print(self._destroyedTrees)
         
         
-        df = pd.DataFrame({'x': self._densities, 'y1': self._leftTrees[0], 'y2': self._leftTrees[1], 'y3': self._leftTrees[2], 'y4': self._leftTrees[3]})
+        df = pd.DataFrame({'x': self._densities, 'y1': self._destroyedTrees[0], 'y2': self._destroyedTrees[1], 'y3': self._detroyedTrees[2], 'y4': self._detroyedTrees[3]})
         
         plt.subplot(111)
         plt.plot('x', 'y1', data=df, marker='o', markerfacecolor="green", color="green", label="5 ans")
